@@ -5,7 +5,7 @@
  * Owner: Hans
  */
 
-import { createClient } from "@supabase/supabase-js"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { validateRegisterRequest, validateLoginRequest } from "./validation.ts"
 import { registerUser, loginUser } from "./service.ts"
 import { successResponse, errorResponse } from "../_shared/response.ts"

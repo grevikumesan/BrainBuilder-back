@@ -2,7 +2,7 @@
  * Payment Create Edge Function
  * Endpoint: POST /payment/create
  * Handles UC-07 (Payment Process)
- * Owner: FJ
+ * Owner: Grevi
  */
 
 import { validateCreatePaymentRequest } from "./validation.ts"

@@ -2,15 +2,19 @@
  * Payment Create Edge Function
  * Endpoint: POST /payment/create
  * Handles UC-07 (Payment Process)
- * Owner: FJ
+ * Owner: Grevi
  */
 
-import { SupabaseClient } from "@supabase/supabase-js"
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { CreatePaymentRequest, MidtransChargeResponse } from "./types.ts"
 import { NotFoundError, AppError } from "../_shared/errors.ts"
 
 const MIDTRANS_SERVER_KEY = Deno.env.get("MIDTRANS_SERVER_KEY") ?? ""
-const MIDTRANS_API_URL = Deno.env.get("MIDTRANS_API_URL") ?? "https://app.sandbox.midtrans.com/snap/v1/transactions"
+const MIDTRANS_MERCHANT_ID = Deno.env.get("MIDTRANS_MERCHANT_ID") ?? ""
+const MIDTRANS_IS_PRODUCTION = Deno.env.get("MIDTRANS_IS_PRODUCTION") === "true"
+const MIDTRANS_API_URL = MIDTRANS_IS_PRODUCTION
+	? "https://app.midtrans.com/snap/v1/transactions"
+	: "https://app.sandbox.midtrans.com/snap/v1/transactions"
 
 export async function createPaymentTransaction(
 	supabase: SupabaseClient,
@@ -26,7 +30,7 @@ export async function createPaymentTransaction(
 		throw new NotFoundError("Plan not found")
 	}
 
-	const orderId = `BB-${request.userId}-${Date.now()}`
+	const orderId = `BB-${MIDTRANS_MERCHANT_ID}-${request.userId}-${Date.now()}`
 
 	const { error: txError } = await supabase
 		.from("transactions")
@@ -56,7 +60,15 @@ export async function createPaymentTransaction(
 			},
 			customer_details: {
 				customer_id: request.userId,
-			}
+			},
+			item_details: [
+				{
+					id: plan.id,
+					price: plan.price,
+					quantity: 1,
+					name: plan.name,
+				}
+			]
 		})
 	})
 
