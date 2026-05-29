@@ -7,7 +7,6 @@ CREATE TABLE users (
 	id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
 	name TEXT NOT NULL,
 	email TEXT NOT NULL UNIQUE,
-	password_hash TEXT NOT NULL,
 	status user_status NOT NULL DEFAULT 'ACTIVE',
 	role user_role NOT NULL DEFAULT 'STUDENT',
 	created_at TIMESTAMPTZ DEFAULT now()
