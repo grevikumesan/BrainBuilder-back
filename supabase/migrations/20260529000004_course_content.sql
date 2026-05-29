@@ -26,7 +26,7 @@ CREATE TABLE lessons (
 	rich_text_content TEXT,
 	summary TEXT,
 	is_premium BOOLEAN NOT NULL DEFAULT false,
-	order INT NOT NULL DEFAULT 0,
+	lesson_order INT NOT NULL DEFAULT 0,
 	created_at TIMESTAMPTZ DEFAULT now()
 );
 
