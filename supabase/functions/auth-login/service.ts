@@ -33,7 +33,6 @@ export async function registerUser(
 			id: authData.user.id,
 			name: request.name,
 			email: request.email,
-			password_hash: "",
 			role: request.role,
 			status: "ACTIVE",
 		})
