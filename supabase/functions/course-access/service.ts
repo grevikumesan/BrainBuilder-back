@@ -2,10 +2,10 @@
  * Course Access Edge Function
  * Endpoint: GET /courses, GET /lessons/:id
  * Handles UC-02 (Access Materials)
- * Owner: Grevi / Jason
+ * Owner: Jason
  */
 
-import { SupabaseClient } from "@supabase/supabase-js"
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2"
 import {
 	CourseListItem,
 	CourseListResponse,
@@ -77,7 +77,7 @@ export async function getLessonDetail(
 	const quiz = await fetchQuizSummary(supabase, lessonId)
 
 	// Record lesson view in progress log
-	await recordLessonView(supabase, userId, lessonId, lesson.course_id)
+	await recordLessonView(supabase, userId, lesson.course_id)
 
 	return {
 		lesson: mapLessonRow(lesson, quiz),
@@ -125,10 +125,8 @@ async function fetchQuizSummary(
 async function recordLessonView(
 	supabase: SupabaseClient,
 	userId: string,
-	lessonId: string,
 	courseId: string
 ): Promise<void> {
-	// Upsert so duplicate views don't throw an error
 	await supabase
 		.from("enrollments")
 		.upsert(
@@ -138,18 +136,6 @@ async function recordLessonView(
 				last_accessed_at: new Date().toISOString(),
 			},
 			{ onConflict: "user_id,course_id" }
-		)
-
-	// Upsert lesson view so re-opening the same lesson is idempotent
-	await supabase
-		.from("lesson_views")
-		.upsert(
-			{
-				user_id: userId,
-				lesson_id: lessonId,
-				viewed_at: new Date().toISOString(),
-			},
-			{ onConflict: "user_id,lesson_id" }
 		)
 }
 
