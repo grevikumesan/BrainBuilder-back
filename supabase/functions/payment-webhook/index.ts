@@ -2,7 +2,7 @@
  * Payment Webhook Edge Function
  * Endpoint: POST /payment/webhook
  * Handles UC-07 (Payment Process — async callback)
- * Owner: FJ
+ * Owner: Grevi
  */
 
 import { handlePaymentCallback } from "./service.ts"
