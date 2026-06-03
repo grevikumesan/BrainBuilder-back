@@ -97,17 +97,6 @@ CREATE TABLE enrollments (
 );
 
 -- ============================================================
--- lesson_views table
--- ============================================================
-CREATE TABLE lesson_views (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    lesson_id UUID NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
-    viewed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (user_id, lesson_id)
-);
-
--- ============================================================
 -- indexes
 -- ============================================================
 CREATE INDEX idx_courses_subject_grade_status ON courses (subject, grade, status);
