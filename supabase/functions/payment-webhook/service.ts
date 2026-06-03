@@ -2,10 +2,10 @@
  * Payment Webhook Edge Function
  * Endpoint: POST /payment/webhook
  * Handles UC-07 (Payment Process — async callback)
- * Owner: FJ
+ * Owner: Grevi
  */
 
-import { SupabaseClient } from "@supabase/supabase-js"
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { MidtransCallbackPayload } from "./types.ts"
 import { AppError, NotFoundError } from "../_shared/errors.ts"
 
