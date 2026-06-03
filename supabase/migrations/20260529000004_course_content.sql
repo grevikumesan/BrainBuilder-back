@@ -112,6 +112,7 @@ CREATE TABLE lesson_views (
 -- ============================================================
 CREATE INDEX idx_courses_subject_grade_status ON courses (subject, grade, status);
 CREATE INDEX idx_lessons_course_id ON lessons (course_id);
+CREATE INDEX IF NOT EXISTS idx_lessons_course_order ON lessons (course_id, lesson_order ASC);
 CREATE INDEX idx_submissions_user_id ON submissions (user_id);
 CREATE INDEX idx_submissions_quiz_id ON submissions (quiz_id);
 CREATE INDEX idx_enrollments_user_id ON enrollments (user_id);
