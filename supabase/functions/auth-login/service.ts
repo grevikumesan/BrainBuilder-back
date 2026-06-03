@@ -5,7 +5,7 @@
  * Owner: Hans
  */
 
-import { SupabaseClient } from "@supabase/supabase-js"
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { RegisterRequest, LoginRequest, AuthResponse } from "./types.ts"
 import { AppError } from "../_shared/errors.ts"
 
