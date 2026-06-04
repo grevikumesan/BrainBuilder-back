@@ -5,15 +5,12 @@ export function validateCreatePaymentRequest(body: unknown): CreatePaymentReques
 		throw new Error("Invalid request body")
 	}
 
-	const { planId, userId } = body as Record<string, unknown>
+	const { planId } = body as Record<string, unknown>
 
+	// userId is taken from the JWT claim, never from the client body (NFR-01)
 	if (!planId || typeof planId !== "string") {
 		throw new Error("planId is required")
 	}
 
-	if (!userId || typeof userId !== "string") {
-		throw new Error("userId is required")
-	}
-
-	return { planId, userId }
+	return { planId }
 }
