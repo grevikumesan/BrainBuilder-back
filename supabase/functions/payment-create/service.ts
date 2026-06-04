@@ -16,6 +16,32 @@ const MIDTRANS_API_URL = MIDTRANS_IS_PRODUCTION
 	? "https://app.midtrans.com/snap/v1/transactions"
 	: "https://app.sandbox.midtrans.com/snap/v1/transactions"
 
+export async function getPlans(
+	supabase: SupabaseClient
+): Promise<unknown> {
+	const { data: plans, error } = await supabase
+		.from("plans")
+		.select("id, name, price, duration_days")
+		.order("price", { ascending: true })
+
+	if (error) throw new AppError("Failed to fetch plans")
+	return plans
+}
+
+export async function getSubscriptionStatus(
+	supabase: SupabaseClient,
+	userId: string
+): Promise<unknown> {
+	const { data: subscription, error } = await supabase
+		.from("subscriptions")
+		.select("id, status, start_date, expires_at")
+		.eq("user_id", userId)
+		.single()
+
+	if (error) return { status: "INACTIVE" }
+	return subscription
+}
+
 export async function createPaymentTransaction(
 	supabase: SupabaseClient,
 	request: CreatePaymentRequest & { userId: string }
