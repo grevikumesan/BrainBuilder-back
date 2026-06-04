@@ -81,7 +81,11 @@ export async function createPaymentTransaction(
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			"Authorization": `Basic ${btoa(MIDTRANS_SERVER_KEY + ":")}`
+			"Authorization": `Basic ${btoa(MIDTRANS_SERVER_KEY + ":")}`,
+			// Route callbacks to this project's webhook per-transaction, so the
+			// shared Midtrans sandbox dashboard URL (used by another project)
+			// stays untouched (UC-07)
+			"X-Override-Notification": `${Deno.env.get("SUPABASE_URL")}/functions/v1/payment-webhook`
 		},
 		body: JSON.stringify({
 			transaction_details: {
