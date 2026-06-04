@@ -1,6 +1,5 @@
 export interface CreatePaymentRequest {
 	planId: string
-	userId: string
 }
 
 export interface MidtransChargeRequest {
