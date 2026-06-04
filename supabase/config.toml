@@ -391,6 +391,11 @@ backend = "postgres"
 [functions.payment-webhook]
 verify_jwt = false
 
+# payment-create serves a public GET /plans (FR-08) alongside authenticated
+# routes; it enforces the JWT itself, so the gateway check must be off (UC-07).
+[functions.payment-create]
+verify_jwt = false
+
 # auth-login serves register/login before a user has a token (UC-01).
 [functions.auth-login]
 verify_jwt = false
