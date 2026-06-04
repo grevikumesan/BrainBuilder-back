@@ -53,7 +53,7 @@ export async function getLessonDetail(
 	// Fetch lesson including isPremium flag
 	const { data: lessonData, error: lessonError } = await supabase
 		.from("lessons")
-		.select("id, course_id, title, video_url, rich_text_content, summary, is_premium, order")
+		.select("id, course_id, title, video_url, rich_text_content, summary, is_premium, lesson_order")
 		.eq("id", lessonId)
 		.single()
 
@@ -151,7 +151,7 @@ function mapLessonRow(
 		richTextContent: row.rich_text_content,
 		summary: row.summary,
 		isPremium: row.is_premium,
-		order: row.order,
+		order: row.lesson_order,
 		quiz: quiz
 			? { id: quiz.id, lessonId: quiz.lesson_id }
 			: null,
