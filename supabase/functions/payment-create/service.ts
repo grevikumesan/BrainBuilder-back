@@ -30,7 +30,11 @@ export async function createPaymentTransaction(
 		throw new NotFoundError("Plan not found")
 	}
 
-	const orderId = `BB-${MIDTRANS_MERCHANT_ID}-${request.userId}-${Date.now()}`
+	// Midtrans caps order_id at 50 chars, so keep it short and unique
+	const orderId = `BB-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
+
+	// Midtrans requires an integer gross_amount for IDR (no decimals)
+	const amount = Math.round(Number(plan.price))
 
 	const { error: txError } = await supabase
 		.from("transactions")
@@ -38,7 +42,7 @@ export async function createPaymentTransaction(
 			order_id: orderId,
 			user_id: request.userId,
 			plan_id: request.planId,
-			amount: plan.price,
+			amount: amount,
 			status: "PENDING",
 			created_at: new Date().toISOString(),
 		})
@@ -56,7 +60,7 @@ export async function createPaymentTransaction(
 		body: JSON.stringify({
 			transaction_details: {
 				order_id: orderId,
-				gross_amount: plan.price,
+				gross_amount: amount,
 			},
 			customer_details: {
 				customer_id: request.userId,
@@ -64,7 +68,7 @@ export async function createPaymentTransaction(
 			item_details: [
 				{
 					id: plan.id,
-					price: plan.price,
+					price: amount,
 					quantity: 1,
 					name: plan.name,
 				}
