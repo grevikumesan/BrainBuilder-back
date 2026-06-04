@@ -66,6 +66,8 @@ export async function handlePaymentCallback(
 		const expiryDate = new Date()
 		expiryDate.setDate(expiryDate.getDate() + (plan?.duration_days ?? 30))
 
+		// Upsert on user_id so a repeated callback updates the existing
+		// subscription instead of inserting a duplicate (idempotent activation)
 		await supabase
 			.from("subscriptions")
 			.upsert({
@@ -74,6 +76,6 @@ export async function handlePaymentCallback(
 				status: "ACTIVE",
 				start_date: new Date().toISOString(),
 				expires_at: expiryDate.toISOString(),
-			})
+			}, { onConflict: "user_id" })
 	}
 }
