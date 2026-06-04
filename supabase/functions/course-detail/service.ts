@@ -25,9 +25,9 @@ async function getCourseBase(supabase: SupabaseClient, courseId: string) {
 async function getLessonsForCourse(supabase: SupabaseClient, courseId: string): Promise<LessonDetail[]> {
     const { data, error } = await supabase
         .from("lessons")
-        .select("id, title, video_url, rich_text_content, summary, is_premium, order")
+        .select("id, title, video_url, rich_text_content, summary, is_premium, lesson_order")
         .eq("course_id", courseId)
-        .order("order", { ascending: true })
+        .order("lesson_order", { ascending: true })
         
     if (error || !data) {
         throw new AppError("Failed to fetch lessons", 500)
@@ -39,7 +39,7 @@ async function getLessonsForCourse(supabase: SupabaseClient, courseId: string): 
         richTextContent: l.rich_text_content ?? undefined,
         summary: l.summary ?? undefined,
         isPremium: l.is_premium,
-        order: l.order,
+        order: l.lesson_order,
     }))
 }
 

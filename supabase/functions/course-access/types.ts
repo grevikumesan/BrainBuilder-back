@@ -21,7 +21,7 @@ export interface LessonRow {
 	rich_text_content: string
 	summary: string
 	is_premium: boolean
-	order: number
+	lesson_order: number
 }
 
 export interface QuizRow {
