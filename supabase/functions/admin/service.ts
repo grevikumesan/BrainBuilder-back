@@ -84,10 +84,11 @@ async function handleUserAction(
 	}
 
 	if (request.action === "REMOVE_USER") {
-		const { error } = await supabase
-			.from("users")
-			.delete()
-			.eq("id", request.targetId)
+		// Delete the auth user so the account can no longer log in; the
+		// public.users row (and the user's courses/subscriptions) are removed
+		// via ON DELETE CASCADE. Deleting only public.users would leave an
+		// orphaned auth account that could still authenticate.
+		const { error } = await supabase.auth.admin.deleteUser(request.targetId)
 
 		if (error) throw new AppError("Failed to remove user")
 	} else {
