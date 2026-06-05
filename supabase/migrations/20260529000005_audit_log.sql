@@ -9,13 +9,13 @@ CREATE TABLE audit_log (
 
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 
--- hanya admin yang bisa read audit log
+-- only admins can read the audit log
 CREATE POLICY "audit_log_admin_read" ON audit_log
 	FOR SELECT USING (
 		(SELECT role FROM users WHERE id = auth.uid()) = 'ADMIN'
 	);
 
--- audit log append-only, tidak ada update atau delete (NFR-11)
+-- audit log is append-only: no update or delete policy is defined (NFR-11)
 CREATE POLICY "audit_log_admin_insert" ON audit_log
 	FOR INSERT WITH CHECK (
 		(SELECT role FROM users WHERE id = auth.uid()) = 'ADMIN'
