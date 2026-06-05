@@ -4,5 +4,5 @@ export interface JWTClaims {
 	sub: string
 	role: Role
 	email: string
-	exp: number
+	exp?: number
 }
