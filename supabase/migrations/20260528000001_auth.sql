@@ -15,14 +15,14 @@ CREATE TABLE users (
 -- RLS
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
--- user hanya bisa lihat dan update data sendiri
+-- users can only read and update their own row
 CREATE POLICY "users_read_own" ON users
 	FOR SELECT USING (auth.uid() = id);
 
 CREATE POLICY "users_update_own" ON users
 	FOR UPDATE USING (auth.uid() = id);
 
--- admin bisa lihat semua user
+-- admins can read every user
 CREATE POLICY "users_admin_read_all" ON users
 	FOR SELECT USING (
 		(SELECT role FROM users WHERE id = auth.uid()) = 'ADMIN'
