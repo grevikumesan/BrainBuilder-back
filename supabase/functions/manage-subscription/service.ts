@@ -39,7 +39,7 @@ async function fetchCurrentSubscription(
 ): Promise<SubscriptionRow | null> {
 	const { data, error } = await supabase
 		.from("subscriptions")
-		.select("status, plan_id, start_date, expiry_date, plans(name)")
+		.select("status, plan_id, start_date, expires_at, plans(name)")
 		.eq("user_id", userId)
 		.order("start_date", { ascending: false })
 		.limit(1)
@@ -57,15 +57,15 @@ function resolveSubscriptionStatus(row: SubscriptionRow | null): SubscriptionSta
 	// Guard against a subscription that was ACTIVE but its expiry has passed
 	const isExpired =
 		row.status === "ACTIVE" &&
-		row.expiry_date !== null &&
-		new Date(row.expiry_date) < new Date()
+		row.expires_at !== null &&
+		new Date(row.expires_at) < new Date()
  
 	return {
 		status: isExpired ? "EXPIRED" : (row.status as SubscriptionStatus["status"]),
 		planId: row.plan_id,
 		planName: row.plans?.name ?? null,
 		startDate: row.start_date,
-		expiryDate: row.expiry_date,
+		expiryDate: row.expires_at,
 	}
 }
  

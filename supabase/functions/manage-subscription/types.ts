@@ -29,7 +29,7 @@ export interface SubscriptionRow {
 	status: string
 	plan_id: string | null
 	start_date: string | null
-	expiry_date: string | null
+	expires_at: string | null
 	plans: {
 		name: string
 	} | null
