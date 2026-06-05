@@ -12,7 +12,7 @@ import {
 	LessonDetailResponse,
 	CourseRow,
 	LessonRow,
-	QuizRow,
+	QuizSummary,
 } from "./types.ts"
 import { CourseListQuery } from "./validation.ts"
 import { NotFoundError, ForbiddenError, AppError } from "../_shared/errors.ts"
@@ -67,8 +67,14 @@ export async function getLessonDetail(
 	const accessAllowed = await checkLessonAccess(supabase, lesson.is_premium, userId)
 
 	if (!accessAllowed) {
+		// Withhold premium content from students without an active subscription
+		// (UC-02 Ext 4a); return only the gating flag and an empty lesson shell
+		const gatedLesson = mapLessonRow(lesson, null)
+		gatedLesson.videoUrl = ""
+		gatedLesson.richTextContent = ""
+		gatedLesson.summary = "Premium access required to view content"
 		return {
-			lesson: mapLessonRow(lesson, null),
+			lesson: gatedLesson,
 			accessAllowed: false,
 		}
 	}
@@ -111,15 +117,35 @@ async function checkLessonAccess(
 async function fetchQuizSummary(
 	supabase: SupabaseClient,
 	lessonId: string
-): Promise<QuizRow | null> {
-	const { data, error } = await supabase
+): Promise<QuizSummary | null> {
+	const { data: quiz, error } = await supabase
 		.from("quizzes")
-		.select("id, lesson_id, status")
+		.select("id, lesson_id")
 		.eq("lesson_id", lessonId)
 		.maybeSingle()
 
-	if (error) return null
-	return data as QuizRow | null
+	if (error || !quiz) return null
+
+	// Return the questions needed to render and answer the quiz, but never the
+	// answer key — correct_answer is deliberately excluded so it cannot leak
+	const { data: questions, error: questionsError } = await supabase
+		.from("questions")
+		.select("id, type, prompt, options")
+		.eq("quiz_id", quiz.id)
+		.order("created_at", { ascending: true })
+
+	if (questionsError) return null
+
+	return {
+		id: quiz.id,
+		lessonId: quiz.lesson_id,
+		questions: (questions ?? []).map((q) => ({
+			id: q.id,
+			type: q.type,
+			prompt: q.prompt,
+			options: q.options ?? null,
+		})),
+	}
 }
 
 async function recordLessonView(
@@ -152,8 +178,6 @@ function mapLessonRow(
 		summary: row.summary,
 		isPremium: row.is_premium,
 		order: row.lesson_order,
-		quiz: quiz
-			? { id: quiz.id, lessonId: quiz.lesson_id }
-			: null,
+		quiz: quiz,
 	}
 }
