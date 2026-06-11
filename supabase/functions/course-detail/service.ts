@@ -12,7 +12,7 @@ import { AppError } from "../_shared/errors.ts"
 async function getCourseBase(supabase: SupabaseClient, courseId: string) {
     const { data, error } = await supabase
         .from("courses")
-        .select("id, title, description, subject, grade")
+        .select("id, title, description, subject, grade, status, teacher_id")
         .eq("id", courseId)
         .single()
         
@@ -61,8 +61,20 @@ export async function getCourseDetail(
     role: string
 ): Promise<CourseDetailResponse> {
     const course = await getCourseBase(supabase, courseId)
+
+    // Enforce the approval gate (NFR-11): students only see approved courses,
+    // a teacher may see their own drafts, an admin sees all. Use 404 so an
+    // unapproved course's existence is not revealed.
+    const isVisible =
+        role === "ADMIN" ||
+        course.status === "APPROVED" ||
+        (role === "TEACHER" && course.teacher_id === userId)
+    if (!isVisible) {
+        throw new AppError("Course not found", 404)
+    }
+
     const lessons = await getLessonsForCourse(supabase, courseId)
-    
+
     // Bypass check for teachers to allow raw content moderation/evaluation
     const hasPremiumAccess = role === "TEACHER" || await checkPremiumAccess(supabase, userId)
     
@@ -78,5 +90,12 @@ export async function getCourseDetail(
         return lesson
     })
 
-    return { ...course, lessons: processedLessons }
+    return {
+        id: course.id,
+        title: course.title,
+        description: course.description,
+        subject: course.subject,
+        grade: course.grade,
+        lessons: processedLessons,
+    }
 }
