@@ -61,14 +61,53 @@ async function fetchCourseMetadata(
 	return new Map((data ?? []).map((c: CourseMetaRow) => [c.id, c]))
 }
  
+async function fetchLessonCounts(
+	supabase: SupabaseClient,
+	courseIds: string[]
+): Promise<Map<string, number>> {
+	if (courseIds.length === 0) return new Map()
+
+	const { data, error } = await supabase
+		.from("lessons")
+		.select("course_id")
+		.in("course_id", courseIds)
+
+	if (error) throw new AppError("Failed to fetch lesson counts", 500)
+
+	const counts = new Map<string, number>()
+	for (const row of (data ?? []) as { course_id: string }[]) {
+		counts.set(row.course_id, (counts.get(row.course_id) ?? 0) + 1)
+	}
+	return counts
+}
+
+// A lesson counts as completed once the student has submitted its quiz — there
+// is no per-lesson view log, so completion is distinct quizzed-lessons / total
+function computeCompletedLessons(
+	submissions: SubmissionRow[]
+): Map<string, Set<string>> {
+	const byCourse = new Map<string, Set<string>>()
+	for (const s of submissions) {
+		const courseId = s.quizzes?.lessons?.course_id
+		const lessonId = s.quizzes?.lesson_id
+		if (courseId && lessonId) {
+			if (!byCourse.has(courseId)) byCourse.set(courseId, new Set())
+			byCourse.get(courseId)!.add(lessonId)
+		}
+	}
+	return byCourse
+}
+
 function computeCourseProgress(
 	enrollments: EnrollmentRow[],
-	courseMetaMap: Map<string, CourseMetaRow>
+	courseMetaMap: Map<string, CourseMetaRow>,
+	lessonCounts: Map<string, number>,
+	completedByCourse: Map<string, Set<string>>
 ): CourseProgress[] {
 	return enrollments.map(e => {
 		const meta = courseMetaMap.get(e.course_id)
-		const total = e.total_lessons ?? 0
-		const completed = e.completed_lessons ?? 0
+		const total = lessonCounts.get(e.course_id) ?? 0
+		const completed = completedByCourse.get(e.course_id)?.size ?? 0
 		return {
 			courseId: e.course_id,
 			courseTitle: meta?.title ?? "Unknown Course",
@@ -156,7 +195,9 @@ export async function getProgress(
 	]
  
 	const courseMetaMap = await fetchCourseMetadata(supabase, courseIds)
-	const courseProgress = computeCourseProgress(enrollments, courseMetaMap)
+	const lessonCounts = await fetchLessonCounts(supabase, courseIds)
+	const completedByCourse = computeCompletedLessons(submissions)
+	const courseProgress = computeCourseProgress(enrollments, courseMetaMap, lessonCounts, completedByCourse)
 	const { scoreHistory, accumulatorMap } = buildScoreHistory(submissions, courseMetaMap)
 	const recommendedTopics = buildRecommendations(accumulatorMap, courseMetaMap)
  
