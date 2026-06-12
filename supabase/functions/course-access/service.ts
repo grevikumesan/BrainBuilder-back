@@ -48,7 +48,8 @@ export async function listApprovedCourses(
 export async function getLessonDetail(
 	supabase: SupabaseClient,
 	lessonId: string,
-	userId: string
+	userId: string,
+	role: string
 ): Promise<LessonDetailResponse> {
 	// Fetch lesson including isPremium flag
 	const { data: lessonData, error: lessonError } = await supabase
@@ -64,7 +65,7 @@ export async function getLessonDetail(
 	const lesson = lessonData as LessonRow
 
 	// Check premium access gating
-	const accessAllowed = await checkLessonAccess(supabase, lesson.is_premium, userId)
+	const accessAllowed = await checkLessonAccess(supabase, lesson.is_premium, userId, role)
 
 	if (!accessAllowed) {
 		// Withhold premium content from students without an active subscription
@@ -94,8 +95,11 @@ export async function getLessonDetail(
 async function checkLessonAccess(
 	supabase: SupabaseClient,
 	isPremium: boolean,
-	userId: string
+	userId: string,
+	role: string
 ): Promise<boolean> {
+	// Teachers and admins may view full content (incl. premium) for authoring / moderation
+	if (role === "TEACHER" || role === "ADMIN") return true
 	// Non-premium lessons are always accessible
 	if (!isPremium) return true
 

@@ -75,8 +75,9 @@ export async function getCourseDetail(
 
     const lessons = await getLessonsForCourse(supabase, courseId)
 
-    // Bypass check for teachers to allow raw content moderation/evaluation
-    const hasPremiumAccess = role === "TEACHER" || await checkPremiumAccess(supabase, userId)
+    // Teachers and admins bypass premium gating so they can review the full
+    // content (incl. premium lessons) for authoring / moderation
+    const hasPremiumAccess = role === "TEACHER" || role === "ADMIN" || await checkPremiumAccess(supabase, userId)
     
     const processedLessons = lessons.map(lesson => {
         if (lesson.isPremium && !hasPremiumAccess) {

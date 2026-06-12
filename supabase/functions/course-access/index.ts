@@ -34,7 +34,7 @@ Deno.serve(async (req: Request) => {
 		const lessonMatch = path.match(/\/lessons\/([^/]+)$/)
 		if (lessonMatch && req.method === "GET") {
 			const lessonId = validateLessonId(lessonMatch[1])
-			const result = await getLessonDetail(supabase, lessonId, claims.sub)
+			const result = await getLessonDetail(supabase, lessonId, claims.sub, claims.role ?? "STUDENT")
 			return successResponse(result, 200)
 		}
 
