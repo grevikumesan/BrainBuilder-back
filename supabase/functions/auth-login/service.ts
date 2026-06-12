@@ -7,6 +7,7 @@
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { RegisterRequest, LoginRequest, AuthResponse } from "./types.ts"
+import { getServiceClient } from "../_shared/db.ts"
 import { AppError } from "../_shared/errors.ts"
 
 export async function registerUser(
@@ -26,8 +27,10 @@ export async function registerUser(
 		throw new AppError(authError?.message ?? "Registration failed")
 	}
 
-	// Insert into users table
-	const { error: userError } = await supabase
+	// Insert the profile with the service-role client: the users table has RLS
+	// enabled with no INSERT policy, so the public anon client cannot write it
+	const admin = getServiceClient()
+	const { error: userError } = await admin
 		.from("users")
 		.insert({
 			id: authData.user.id,
@@ -38,7 +41,7 @@ export async function registerUser(
 		})
 
 	if (userError) {
-		throw new AppError("Failed to create user profile")
+		throw new AppError(userError.message ?? "Failed to create user profile")
 	}
 
 	return {

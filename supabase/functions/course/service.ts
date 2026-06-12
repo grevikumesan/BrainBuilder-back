@@ -43,7 +43,7 @@ export async function createCourse(
 				rich_text_content: lessonReq.richTextContent ?? null,
 				summary: lessonReq.summary ?? null,
 				is_premium: lessonReq.isPremium,
-				order: lessonReq.order,
+				lesson_order: lessonReq.order,
 			})
 			.select("id")
 			.single()

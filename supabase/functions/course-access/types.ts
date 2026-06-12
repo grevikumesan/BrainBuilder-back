@@ -1,6 +1,6 @@
-export type Subject = "MATH" | "PHYSICS" | "CHEMISTRY"
+export type Subject = "MATHEMATICS" | "PHYSICS" | "CHEMISTRY"
 export type Grade = "X" | "XI" | "XII"
-export type CourseStatus = "DRAFT" | "PENDING" | "APPROVED" | "REJECTED"
+export type CourseStatus = "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED"
 
 export interface CourseRow {
 	id: string
@@ -21,13 +21,12 @@ export interface LessonRow {
 	rich_text_content: string
 	summary: string
 	is_premium: boolean
-	order: number
+	lesson_order: number
 }
 
 export interface QuizRow {
 	id: string
 	lesson_id: string
-	status: string
 }
 
 export interface CourseListItem {
@@ -51,9 +50,17 @@ export interface LessonDetail {
 	quiz: QuizSummary | null
 }
 
+export interface QuizQuestion {
+	id: string
+	type: string
+	prompt: string
+	options: string[] | null
+}
+
 export interface QuizSummary {
 	id: string
 	lessonId: string
+	questions: QuizQuestion[]
 }
 
 export interface CourseListResponse {

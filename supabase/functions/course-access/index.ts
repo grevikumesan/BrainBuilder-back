@@ -2,7 +2,7 @@
  * Course Access Edge Function
  * Endpoint: GET /courses?subject=&grade=, GET /lessons/:id
  * Handles UC-02 (Access Materials)
- * Owner: Grevi / Jason
+ * Owner: Jason
  */
 
 import { validateCourseListQuery, validateLessonId } from "./validation.ts"

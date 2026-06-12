@@ -16,6 +16,32 @@ const MIDTRANS_API_URL = MIDTRANS_IS_PRODUCTION
 	? "https://app.midtrans.com/snap/v1/transactions"
 	: "https://app.sandbox.midtrans.com/snap/v1/transactions"
 
+export async function getPlans(
+	supabase: SupabaseClient
+): Promise<unknown> {
+	const { data: plans, error } = await supabase
+		.from("plans")
+		.select("id, name, price, duration_days")
+		.order("price", { ascending: true })
+
+	if (error) throw new AppError("Failed to fetch plans")
+	return plans
+}
+
+export async function getSubscriptionStatus(
+	supabase: SupabaseClient,
+	userId: string
+): Promise<unknown> {
+	const { data: subscription, error } = await supabase
+		.from("subscriptions")
+		.select("id, status, start_date, expires_at")
+		.eq("user_id", userId)
+		.single()
+
+	if (error) return { status: "INACTIVE" }
+	return subscription
+}
+
 export async function createPaymentTransaction(
 	supabase: SupabaseClient,
 	request: CreatePaymentRequest & { userId: string }
@@ -30,7 +56,11 @@ export async function createPaymentTransaction(
 		throw new NotFoundError("Plan not found")
 	}
 
-	const orderId = `BB-${MIDTRANS_MERCHANT_ID}-${request.userId}-${Date.now()}`
+	// Midtrans caps order_id at 50 chars, so keep it short and unique
+	const orderId = `BB-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
+
+	// Midtrans requires an integer gross_amount for IDR (no decimals)
+	const amount = Math.round(Number(plan.price))
 
 	const { error: txError } = await supabase
 		.from("transactions")
@@ -38,7 +68,7 @@ export async function createPaymentTransaction(
 			order_id: orderId,
 			user_id: request.userId,
 			plan_id: request.planId,
-			amount: plan.price,
+			amount: amount,
 			status: "PENDING",
 			created_at: new Date().toISOString(),
 		})
@@ -51,12 +81,16 @@ export async function createPaymentTransaction(
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			"Authorization": `Basic ${btoa(MIDTRANS_SERVER_KEY + ":")}`
+			"Authorization": `Basic ${btoa(MIDTRANS_SERVER_KEY + ":")}`,
+			// Route callbacks to this project's webhook per-transaction, so the
+			// shared Midtrans sandbox dashboard URL (used by another project)
+			// stays untouched (UC-07)
+			"X-Override-Notification": `${Deno.env.get("SUPABASE_URL")}/functions/v1/payment-webhook`
 		},
 		body: JSON.stringify({
 			transaction_details: {
 				order_id: orderId,
-				gross_amount: plan.price,
+				gross_amount: amount,
 			},
 			customer_details: {
 				customer_id: request.userId,
@@ -64,7 +98,7 @@ export async function createPaymentTransaction(
 			item_details: [
 				{
 					id: plan.id,
-					price: plan.price,
+					price: amount,
 					quantity: 1,
 					name: plan.name,
 				}

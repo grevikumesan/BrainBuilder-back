@@ -2,17 +2,17 @@
  * Course Access Edge Function
  * Endpoint: GET /courses, GET /lessons/:id
  * Handles UC-02 (Access Materials)
- * Owner: Grevi / Jason
+ * Owner: Jason
  */
 
-import { SupabaseClient } from "@supabase/supabase-js"
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2"
 import {
 	CourseListItem,
 	CourseListResponse,
 	LessonDetailResponse,
 	CourseRow,
 	LessonRow,
-	QuizRow,
+	QuizSummary,
 } from "./types.ts"
 import { CourseListQuery } from "./validation.ts"
 import { NotFoundError, ForbiddenError, AppError } from "../_shared/errors.ts"
@@ -53,7 +53,7 @@ export async function getLessonDetail(
 	// Fetch lesson including isPremium flag
 	const { data: lessonData, error: lessonError } = await supabase
 		.from("lessons")
-		.select("id, course_id, title, video_url, rich_text_content, summary, is_premium, order")
+		.select("id, course_id, title, video_url, rich_text_content, summary, is_premium, lesson_order")
 		.eq("id", lessonId)
 		.single()
 
@@ -67,8 +67,14 @@ export async function getLessonDetail(
 	const accessAllowed = await checkLessonAccess(supabase, lesson.is_premium, userId)
 
 	if (!accessAllowed) {
+		// Withhold premium content from students without an active subscription
+		// (UC-02 Ext 4a); return only the gating flag and an empty lesson shell
+		const gatedLesson = mapLessonRow(lesson, null)
+		gatedLesson.videoUrl = ""
+		gatedLesson.richTextContent = ""
+		gatedLesson.summary = "Premium access required to view content"
 		return {
-			lesson: mapLessonRow(lesson, null),
+			lesson: gatedLesson,
 			accessAllowed: false,
 		}
 	}
@@ -77,7 +83,7 @@ export async function getLessonDetail(
 	const quiz = await fetchQuizSummary(supabase, lessonId)
 
 	// Record lesson view in progress log
-	await recordLessonView(supabase, userId, lessonId, lesson.course_id)
+	await recordLessonView(supabase, userId, lesson.course_id)
 
 	return {
 		lesson: mapLessonRow(lesson, quiz),
@@ -111,24 +117,42 @@ async function checkLessonAccess(
 async function fetchQuizSummary(
 	supabase: SupabaseClient,
 	lessonId: string
-): Promise<QuizRow | null> {
-	const { data, error } = await supabase
+): Promise<QuizSummary | null> {
+	const { data: quiz, error } = await supabase
 		.from("quizzes")
-		.select("id, lesson_id, status")
+		.select("id, lesson_id")
 		.eq("lesson_id", lessonId)
 		.maybeSingle()
 
-	if (error) return null
-	return data as QuizRow | null
+	if (error || !quiz) return null
+
+	// Return the questions needed to render and answer the quiz, but never the
+	// answer key — correct_answer is deliberately excluded so it cannot leak
+	const { data: questions, error: questionsError } = await supabase
+		.from("questions")
+		.select("id, type, prompt, options")
+		.eq("quiz_id", quiz.id)
+		.order("created_at", { ascending: true })
+
+	if (questionsError) return null
+
+	return {
+		id: quiz.id,
+		lessonId: quiz.lesson_id,
+		questions: (questions ?? []).map((q) => ({
+			id: q.id,
+			type: q.type,
+			prompt: q.prompt,
+			options: q.options ?? null,
+		})),
+	}
 }
 
 async function recordLessonView(
 	supabase: SupabaseClient,
 	userId: string,
-	lessonId: string,
 	courseId: string
 ): Promise<void> {
-	// Upsert so duplicate views don't throw an error
 	await supabase
 		.from("enrollments")
 		.upsert(
@@ -138,18 +162,6 @@ async function recordLessonView(
 				last_accessed_at: new Date().toISOString(),
 			},
 			{ onConflict: "user_id,course_id" }
-		)
-
-	// Upsert lesson view so re-opening the same lesson is idempotent
-	await supabase
-		.from("lesson_views")
-		.upsert(
-			{
-				user_id: userId,
-				lesson_id: lessonId,
-				viewed_at: new Date().toISOString(),
-			},
-			{ onConflict: "user_id,lesson_id" }
 		)
 }
 
@@ -165,9 +177,7 @@ function mapLessonRow(
 		richTextContent: row.rich_text_content,
 		summary: row.summary,
 		isPremium: row.is_premium,
-		order: row.order,
-		quiz: quiz
-			? { id: quiz.id, lessonId: quiz.lesson_id }
-			: null,
+		order: row.lesson_order,
+		quiz: quiz,
 	}
 }

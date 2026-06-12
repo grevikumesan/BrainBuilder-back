@@ -386,6 +386,20 @@ port = 54327
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"
 
+# payment-webhook is called by Midtrans, which does not send a Supabase JWT,
+# so gateway JWT verification must be disabled for it (UC-07).
+[functions.payment-webhook]
+verify_jwt = false
+
+# payment-create serves a public GET /plans (FR-08) alongside authenticated
+# routes; it enforces the JWT itself, so the gateway check must be off (UC-07).
+[functions.payment-create]
+verify_jwt = false
+
+# auth-login serves register/login before a user has a token (UC-01).
+[functions.auth-login]
+verify_jwt = false
+
 # Experimental features may be deprecated any time
 [experimental]
 # Configures Postgres storage engine to use OrioleDB (S3)

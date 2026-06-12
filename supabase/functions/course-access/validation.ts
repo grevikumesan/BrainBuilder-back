@@ -1,6 +1,6 @@
 import { Subject, Grade } from "./types.ts"
 
-const VALID_SUBJECTS: Subject[] = ["MATH", "PHYSICS", "CHEMISTRY"]
+const VALID_SUBJECTS: Subject[] = ["MATHEMATICS", "PHYSICS", "CHEMISTRY"]
 const VALID_GRADES: Grade[] = ["X", "XI", "XII"]
 
 export interface CourseListQuery {
@@ -16,7 +16,7 @@ export function validateCourseListQuery(params: URLSearchParams): CourseListQuer
 		throw new Error("subject query param is required")
 	}
 	if (!VALID_SUBJECTS.includes(subject as Subject)) {
-		throw new Error("subject must be one of: MATH, PHYSICS, CHEMISTRY")
+		throw new Error("subject must be one of: MATHEMATICS, PHYSICS, CHEMISTRY")
 	}
 	if (!grade) {
 		throw new Error("grade query param is required")
