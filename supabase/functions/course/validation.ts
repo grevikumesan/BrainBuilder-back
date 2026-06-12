@@ -1,4 +1,4 @@
-import { CreateCourseRequest } from "./types.ts"
+import { CreateCourseRequest, UpdateCourseRequest } from "./types.ts"
 
 export function validateCreateCourseRequest(body: unknown): CreateCourseRequest {
 	if (!body || typeof body !== "object") {
@@ -33,4 +33,15 @@ export function validateCreateCourseRequest(body: unknown): CreateCourseRequest 
 	}
 
 	return body as CreateCourseRequest
+}
+
+export function validateUpdateCourseRequest(body: unknown): UpdateCourseRequest {
+	validateCreateCourseRequest(body)
+
+	const { courseId } = body as Record<string, unknown>
+	if (!courseId || typeof courseId !== "string") {
+		throw new Error("courseId is required")
+	}
+
+	return body as UpdateCourseRequest
 }

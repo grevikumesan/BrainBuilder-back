@@ -1,12 +1,12 @@
 /**
  * Course Edge Function
- * Endpoint: POST /course
- * Handles UC-08 (Create Course Content)
+ * Endpoint: GET /course (own courses), POST /course (create), PUT /course (edit + resubmit)
+ * Handles UC-08 (Create Course Content) and FR-11 (manage courses)
  * Owner: Grevi
  */
 
-import { validateCreateCourseRequest } from "./validation.ts"
-import { createCourse } from "./service.ts"
+import { validateCreateCourseRequest, validateUpdateCourseRequest } from "./validation.ts"
+import { createCourse, updateCourse, listTeacherCourses } from "./service.ts"
 import { successResponse, errorResponse } from "../_shared/response.ts"
 import { validateJWT } from "../_shared/jwt.ts"
 import { getServiceClient } from "../_shared/db.ts"
@@ -19,14 +19,31 @@ Deno.serve(async (req: Request) => {
 			throw new ForbiddenError()
 		}
 
-		const body = await req.json()
-		const validated = validateCreateCourseRequest(body)
-
 		const supabase = getServiceClient()
 
-		const result = await createCourse(supabase, validated, claims.sub)
+		// GET /course — list the teacher's own courses (status + rejection reason)
+		if (req.method === "GET") {
+			const result = await listTeacherCourses(supabase, claims.sub)
+			return successResponse(result, 200)
+		}
 
-		return successResponse(result, 201)
+		// PUT /course — edit an existing course and resubmit for approval
+		if (req.method === "PUT") {
+			const body = await req.json()
+			const validated = validateUpdateCourseRequest(body)
+			const result = await updateCourse(supabase, validated, claims.sub)
+			return successResponse(result, 200)
+		}
+
+		// POST /course — create a new course
+		if (req.method === "POST") {
+			const body = await req.json()
+			const validated = validateCreateCourseRequest(body)
+			const result = await createCourse(supabase, validated, claims.sub)
+			return successResponse(result, 201)
+		}
+
+		return errorResponse("Method not allowed", 405)
 
 	} catch (error) {
 		const err = error as AppError

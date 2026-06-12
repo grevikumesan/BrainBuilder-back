@@ -6,8 +6,14 @@
  */
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { CreateCourseRequest, CourseResponse } from "./types.ts"
-import { AppError } from "../_shared/errors.ts"
+import {
+	CreateCourseRequest,
+	CreateLessonRequest,
+	UpdateCourseRequest,
+	CourseResponse,
+	TeacherCoursesResponse,
+} from "./types.ts"
+import { AppError, NotFoundError, ForbiddenError } from "../_shared/errors.ts"
 
 export async function createCourse(
 	supabase: SupabaseClient,
@@ -32,12 +38,107 @@ export async function createCourse(
 		throw new AppError("Failed to create course")
 	}
 
-	//insert lessons
-	for (const lessonReq of request.lessons) {
+	await insertLessons(supabase, course.id, request.lessons)
+
+	return {
+		courseId: course.id,
+		status: "PENDING_APPROVAL",
+	}
+}
+
+// List the authenticated teacher's own courses (UC-08 / FR-11) so they can see
+// status + rejection reason and revise a rejected course
+export async function listTeacherCourses(
+	supabase: SupabaseClient,
+	teacherId: string
+): Promise<TeacherCoursesResponse> {
+	const { data, error } = await supabase
+		.from("courses")
+		.select("id, title, subject, grade, status, rejection_reason, created_at")
+		.eq("teacher_id", teacherId)
+		.order("created_at", { ascending: false })
+
+	if (error) {
+		throw new AppError("Failed to fetch courses")
+	}
+
+	return {
+		courses: (data ?? []).map((c) => ({
+			id: c.id,
+			title: c.title,
+			subject: c.subject,
+			grade: c.grade,
+			status: c.status,
+			rejectionReason: c.rejection_reason ?? null,
+			createdAt: c.created_at,
+		})),
+	}
+}
+
+// Edit an existing course and resubmit it for approval (UC-08 Ext 5a / FR-11).
+// Only the owning teacher may edit; lessons/quizzes are fully replaced.
+export async function updateCourse(
+	supabase: SupabaseClient,
+	request: UpdateCourseRequest,
+	teacherId: string
+): Promise<CourseResponse> {
+	const { data: existing, error: findError } = await supabase
+		.from("courses")
+		.select("id, teacher_id")
+		.eq("id", request.courseId)
+		.single()
+
+	if (findError || !existing) {
+		throw new NotFoundError("Course not found")
+	}
+	if (existing.teacher_id !== teacherId) {
+		throw new ForbiddenError()
+	}
+
+	const { error: updateError } = await supabase
+		.from("courses")
+		.update({
+			title: request.title,
+			description: request.description ?? null,
+			subject: request.subject,
+			grade: request.grade,
+			status: "PENDING_APPROVAL",
+			rejection_reason: null,
+		})
+		.eq("id", request.courseId)
+
+	if (updateError) {
+		throw new AppError("Failed to update course")
+	}
+
+	// Replace the course's lessons (FK cascade removes old quizzes/questions/explanations)
+	const { error: deleteError } = await supabase
+		.from("lessons")
+		.delete()
+		.eq("course_id", request.courseId)
+
+	if (deleteError) {
+		throw new AppError("Failed to update course lessons")
+	}
+
+	await insertLessons(supabase, request.courseId, request.lessons)
+
+	return {
+		courseId: request.courseId,
+		status: "PENDING_APPROVAL",
+	}
+}
+
+async function insertLessons(
+	supabase: SupabaseClient,
+	courseId: string,
+	lessons: CreateLessonRequest[]
+): Promise<void> {
+	for (const lessonReq of lessons) {
 		const { data: lesson, error: lessonError } = await supabase
 			.from("lessons")
 			.insert({
-				course_id: course.id,
+				course_id: courseId,
 				title: lessonReq.title,
 				video_url: lessonReq.videoUrl ?? null,
 				rich_text_content: lessonReq.richTextContent ?? null,
@@ -97,10 +198,5 @@ export async function createCourse(
 				}
 			}
 		}
-	}
-
-	return {
-		courseId: course.id,
-		status: "PENDING_APPROVAL",
 	}
 }

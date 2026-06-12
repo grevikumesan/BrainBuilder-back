@@ -36,3 +36,21 @@ export interface CourseResponse {
 	courseId: string
 	status: "PENDING_APPROVAL"
 }
+
+export interface UpdateCourseRequest extends CreateCourseRequest {
+	courseId: string
+}
+
+export interface TeacherCourseItem {
+	id: string
+	title: string
+	subject: string
+	grade: string
+	status: string
+	rejectionReason: string | null
+	createdAt: string
+}
+
+export interface TeacherCoursesResponse {
+	courses: TeacherCourseItem[]
+}
