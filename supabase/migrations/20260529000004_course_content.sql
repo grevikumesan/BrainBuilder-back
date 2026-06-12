@@ -105,7 +105,6 @@ CREATE INDEX IF NOT EXISTS idx_lessons_course_order ON lessons (course_id, lesso
 CREATE INDEX idx_submissions_user_id ON submissions (user_id);
 CREATE INDEX idx_submissions_quiz_id ON submissions (quiz_id);
 CREATE INDEX idx_enrollments_user_id ON enrollments (user_id);
-CREATE INDEX idx_lesson_views_user_id ON lesson_views (user_id);
 
 -- ============================================================
 -- RLS
@@ -117,7 +116,6 @@ ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE explanations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE enrollments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE lesson_views ENABLE ROW LEVEL SECURITY;
 
 -- courses
 CREATE POLICY "courses_student_read_approved" ON courses
@@ -350,23 +348,4 @@ CREATE POLICY "enrollments_student_update_own" ON enrollments
 CREATE POLICY "enrollments_admin_read_all" ON enrollments
     FOR SELECT USING (
         (SELECT role FROM users WHERE id = auth.uid()) = 'ADMIN'
-    );
-
--- lesson_views
-CREATE POLICY "lesson_views_student_read_own" ON lesson_views
-    FOR SELECT USING (
-        user_id = auth.uid()
-        AND (SELECT role FROM users WHERE id = auth.uid()) = 'STUDENT'
-    );
-
-CREATE POLICY "lesson_views_student_insert_own" ON lesson_views
-    FOR INSERT WITH CHECK (
-        user_id = auth.uid()
-        AND (SELECT role FROM users WHERE id = auth.uid()) = 'STUDENT'
-    );
-
-CREATE POLICY "lesson_views_student_update_own" ON lesson_views
-    FOR UPDATE USING (
-        user_id = auth.uid()
-        AND (SELECT role FROM users WHERE id = auth.uid()) = 'STUDENT'
     );
